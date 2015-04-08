@@ -7,6 +7,7 @@ import argparse
 MLB_URL = "http://gd2.mlb.com/"
 DATA_URL = "http://gd2.mlb.com/components/game/mlb/"
 LOCAL_ROOT = ""
+PLAYERS_FETCHED = []
 
 def fetch_game(url, path):
 	try:
@@ -15,10 +16,15 @@ def fetch_game(url, path):
 
 		pitcher_url = os.path.join(url, "pitchers")
 		soup = bs4.BeautifulSoup(urllib.request.urlopen(pitcher_url).read(), "lxml")
-
 		for link in soup.find_all("a"):
 			if link.string.strip().startswith("P"):
 				continue
+
+			pitcher_id = int(link.get("href").strip().split("/")[-1].split(".")[0])
+			if pitcher_id in PLAYERS_FETCHED:
+				continue
+
+			PLAYERS_FETCHED.append(pitcher_id)
 			urllib.request.urlretrieve(os.path.join(pitcher_url, link.get("href").strip()),
 			                           filename=os.path.join(path, link.get("href").strip().split("/")[-1]))
 	except Exception as e:

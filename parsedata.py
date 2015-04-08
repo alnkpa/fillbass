@@ -4,6 +4,7 @@ import sqlalchemy
 import entities
 import matplotlib.pyplot as plt
 import numpy
+import argparse
 
 
 class DatabaseManager(object):
@@ -39,11 +40,14 @@ class DatabaseManager(object):
 	def get_players(self, first_name=None, last_name=None):
 		query = self.session.query(entities.Player)
 		if not first_name is None:
-			query = query.filter(entities.Player.first_name.like(first_name))
+			query = query.filter(entities.Player.first_name.like(first_name + "%"))
 		if not last_name is None:
-			query = query.filter(entities.Player.last_name.like(last_name))
+			query = query.filter(entities.Player.last_name.like(last_name + "%"))
 
 		return query.all()
+
+	def get_player(self, id):
+		return self.session.query(entities.Player).filter_by(pid=id).first()
 
 	def get_pitches(self, pitcher_id=None, pitch_type=None):
 		query = self.session.query(entities.Pitch)
@@ -129,25 +133,53 @@ class Drawer(object):
 		pitch_count = 0
 
 		for t in pitch_types:
-			if t[0].startswith("IN"):
-				continue
 			pitches = self.db.get_pitches(pitcher_id=pitcher.pid, pitch_type=t[0])
 			pitch_count += len(pitches)
 			ax.plot([x.px for x in pitches],
 			         [x.pz for x in pitches],
 			         ".",
 			         label=t[0])
+		ax.hlines(y=0, xmin=-0.7083, xmax=0.7083, label="Home plate")
 		ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-		ax.set_aspect("equal")
+		ax.set_aspect(1)
 		ax.set_title("Pitch Location by type for " + str(pitcher))
 		print("evaluated %i pitches" % pitch_count)
 		plt.show()
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	db = DatabaseManager("fillbass.db")
+	subparsers = parser.add_subparsers(dest="subparser_name")
+
+	scan = subparsers.add_parser("scan", help="""scan and parse a directory tree for
+	                             				 xml files""")
+	scan.add_argument("directory", nargs="?", default="data",
+	                  help="""walk this directory. Defaults to 'data'""")
+
+	list_players = subparsers.add_parser("list", help="""list any players""")
+	list_players.add_argument("first_name", nargs="?", default=None)
+	list_players.add_argument("last_name", nargs="?", default=None)
+
+	show_pitches = subparsers.add_parser("show", help="show pitches")
+	show_pitches.add_argument("pitcher", type=int, help="""id of the wanted pitcher""")
+	parser.add_argument("-d", "--database", default="fillbass.db",
+	                  help="""use this file as the database. Might be written when
+	                  using scan. Defaults to 'fillbass.db'""")
+	args = parser.parse_args()
+
+
+	db = DatabaseManager(args.database)
 	draw = Drawer(db)
 	parser = Parser(db)
-	mar = db.get_players(first_name="Mari%", last_name="Ri%")
-	draw.pitches_by_type(mar[0])
-#	parser.find_files("data")
+
+
+	if args.subparser_name == "scan":
+		parser.find_files(args.directory)
+	elif args.subparser_name == "list":
+		print("ID\tName")
+		players = db.get_players(first_name=args.first_name,
+		               			last_name=args.last_name)
+		for p in players:
+			print("%i\t%s" % (p.pid, p))
+	elif args.subparser_name == "show":
+		draw.pitches_by_type(db.get_player(args.pitcher))
+
