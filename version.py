@@ -52,12 +52,17 @@ import sys
 
 RELEASE_VERSION_FILE = 'RELEASE-VERSION'
 
-# http://www.python.org/dev/peps/pep-0386/
-_PEP386_SHORT_VERSION_RE = r'\d+(?:\.\d+)+(?:(?:[abc]|rc)\d+(?:\.\d+)*)?'
-_PEP386_VERSION_RE = r'^%s(?:\.post\d+)?(?:\.dev\d+)?$' % (
-    _PEP386_SHORT_VERSION_RE)
-_GIT_DESCRIPTION_RE = r'^v(?P<ver>%s)-(?P<commits>\d+)-g(?P<sha>[\da-f]+)$' % (
-    _PEP386_SHORT_VERSION_RE)
+# https://pypi.python.org/pypi/Versio/0.1.2
+_PEP440_VERSION_RE = r"""(?x)
+                        ^
+                        (\d[\.\d]*(?<= \d))
+                        ((?:[abc]|rc)\d+)?
+                        (?:(\.post\d+))?
+                        (?:(\.dev\d+))?
+                        $
+                        """
+_GIT_DESCRIPTION_RE = r'(?x)^v(?P<ver>%s)-(?P<commits>\d+)-g(?P<sha>[\da-f]+)$' % (
+    _PEP440_VERSION_RE[4:].strip()[1:-1])
 
 
 def readGitVersion():
@@ -66,6 +71,7 @@ def readGitVersion():
                                  '--match', 'v[0-9]*.*'),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         data, _ = proc.communicate()
+        print(data)
         if proc.returncode:
             return None
         ver = data.splitlines()[0].strip()
@@ -74,7 +80,7 @@ def readGitVersion():
 
     if not ver:
         return None
-    m = re.search(_GIT_DESCRIPTION_RE, ver)
+    m = re.search(_GIT_DESCRIPTION_RE, ver.decode())
     if not m:
         sys.stderr.write('version: git description (%s) is invalid, '
                          'ignoring\n' % ver)
@@ -84,8 +90,8 @@ def readGitVersion():
     if not commits:
         return m.group('ver')
     else:
-        return '%s.post%d.dev%d' % (
-            m.group('ver'), commits, int(m.group('sha'), 16))
+        return '%s.dev%d' % (
+            m.group('ver'), commits)
 
 
 def readReleaseVersion():
@@ -95,7 +101,7 @@ def readReleaseVersion():
             ver = fd.readline().strip()
         finally:
             fd.close()
-        if not re.search(_PEP386_VERSION_RE, ver):
+        if not re.search(_PEP440_VERSION_RE, ver):
             sys.stderr.write('version: release version (%s) is invalid, '
                              'will use it anyway\n' % ver)
         return ver
@@ -120,4 +126,4 @@ def getVersion():
 
 
 if __name__ == '__main__':
-    print getVersion()
+    print(getVersion())

@@ -1,7 +1,7 @@
 import bs4
 import os
 import sqlalchemy
-import entities
+from . import entities
 import matplotlib.pyplot as plt
 import numpy
 import argparse
