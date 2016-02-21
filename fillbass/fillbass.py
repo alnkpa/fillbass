@@ -4,9 +4,9 @@ import platform
 import PySide
 from PySide.QtGui import QApplication, QMainWindow, QProgressBar
 
-from .ui_fillbass import Ui_MainWindow
-from . import fetchdata
-from . import parsedata
+from ui_fillbass import Ui_MainWindow
+import fetchdata
+import parsedata
 import datetime
 
 class MainWindow(QMainWindow, Ui_MainWindow):
