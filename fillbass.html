@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fillbass</title>
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="//vega.github.io/vega/vega.js" charset="utf-8"></script>
+<script src="//vega.github.io/vega-lite/vega-lite.js" charset="utf-8"></script>
+<script type="text/javascript">
+var vlSpec = {
+  "description": "A simple bar chart with embedded data.",
+  "data": {
+    "values": [],
+    "transform": {
+      "filter": "-4 < datum.px"
+    }
+  },
+  "mark": "circle",
+  "encoding": {
+    "x": {"field": "px", 
+      "type": "quantitative",
+      "scale": {
+        "domain": [-4, 4],
+        "clamp": true
+      }
+    },
+    "y": {"field": "pz", 
+      "type": "quantitative",
+      "scale": {
+        "domain": [0, 6],
+        "clamp": true
+      }
+    },
+    "color": {"field": "pitch_type", "type": "nominal"}
+  },
+  "config": {
+    "cell": {
+      "width": 800,
+      "height": 600
+    }
+  }
+};
+var pitchers = [];
+var MAIN_URL = "http://paschmidt.de/";
+var DOWNLOADING = false;
+var FULLY_DOWNLOADED = {
+	"pitcher": false,
+	"batter": false
+};
+var selected_pitcher;
+
+function update_graph(spec) {
+	var vgSpec = vl.compile(spec).spec;
+	vg.parse.spec(vgSpec, function(chart) {
+	  chart({el:"#vis"}).update();
+	});
+}
+
+function eval_json(json) {
+	return eval("(" + json + ")");
+}
+
+function update_pitcher_list(response) {
+	response_json = eval_json(response);
+	pitchers = response_json._items;
+	var pitcher_options = document.getElementById("pitcher").innerHTML;
+	for (index in pitchers) {
+		pitcher = pitchers[index];
+		pitcher_options += "<option value=" + pitcher.pid + ">" + pitcher.first_name + " " + pitcher.last_name + "</option>";
+	}
+	document.getElementById("pitcher").innerHTML = pitcher_options;
+	var next_page = response_json._links.next;
+	if (next_page) {download_players(update_pitcher_list, next_page.href, true)}
+	else {
+		FULLY_DOWNLOADED.pitcher = true;
+		DOWNLOADING = false;
+	}
+}
+
+function update_batter_list(response) {
+	response_json = eval_json(response);
+	batters = response_json._items;
+	var batter_options = document.getElementById("batter").innerHTML;
+	for (index in batters) {
+		batter = batters[index];
+		batter_options += "<option value=" + batter.pid + ">" + batter.first_name + " " + batter.last_name + "</option>";
+	}
+	document.getElementById("batter").innerHTML = batter_options;
+	var next_page = response_json._links.next;
+	if (next_page) {download_players(update_batter_list, next_page.href, false)}
+	else {
+		FULLY_DOWNLOADED.batter = true;
+		DOWNLOADING = false;
+	}
+}
+
+function download_resource(theUrl, callback) {
+	var request = new XMLHttpRequest();
+    request.onreadystatechange = function() { 
+        if (request.readyState == 4 && request.status == 200)
+            callback(request.responseText);
+    }
+    request.open("GET", theUrl, true); // true for asynchronous 
+    request.setRequestHeader("Accept","text/json");
+	request.send(null);
+}
+
+function download_players(callback, page, pitcher) {
+	if (DOWNLOADING && !page) {return;}
+	if ((pitcher && FULLY_DOWNLOADED.pitcher) || (!pitcher && FULLY_DOWNLOADED.batter)) {return;}
+	DOWNLOADING = true;
+	var theUrl = MAIN_URL + "player"
+	if (pitcher) {theUrl += "?where=pos==\"P\""}
+	theUrl += "&sort=last_name"
+	if (page != null) {theUrl = MAIN_URL + page}
+	download_resource(theUrl, callback);
+}
+
+function update_pitches(json) {
+	vlSpec.data.values = eval_json(json)._items;
+	update_graph(vlSpec);
+}
+
+function download_pitches() {
+	var theUrl = MAIN_URL + "pitch?max_results=10000";
+	if (selected_pitcher) {theUrl += "&where=pitcher==" + selected_pitcher;}
+	download_resource(theUrl, update_pitches)
+}
+
+function pick_pitcher(pid) {
+	if (pid == "all") {selected_pitcher = null}
+	else {selected_pitcher = pid}
+	download_pitches();
+}
+
+function start() {
+	update_graph(vlSpec);
+	download_players(update_pitcher_list, null, true);
+}
+</script>
+</head>
+<body onload="start()">
+<label>
+	Pitcher: 
+	<select id="pitcher" onchange="pick_pitcher(this.value)">
+		<option value="all">all</option>
+	</select>
+</label>
+<label>
+	Batter: 
+	<select id="batter" onfocus="download_players(update_batter_list, null)">
+		<option value="all">all</option>
+	</select>
+</label>
+<div id="vis"></div>
+</body>
+</html>

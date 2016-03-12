@@ -9,12 +9,12 @@ class Player(Entity):
     __tablename__ = "players"
 
     pid = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    pos = sqlalchemy.Column(sqlalchemy.String)
-    first_name = sqlalchemy.Column(sqlalchemy.String)
-    last_name = sqlalchemy.Column(sqlalchemy.String)
-    bats = sqlalchemy.Column(sqlalchemy.String)
-    throws = sqlalchemy.Column(sqlalchemy.String)
-    dob = sqlalchemy.Column(sqlalchemy.String)
+    pos = sqlalchemy.Column(sqlalchemy.String(length=50))
+    first_name = sqlalchemy.Column(sqlalchemy.String(length=50))
+    last_name = sqlalchemy.Column(sqlalchemy.String(length=50))
+    bats = sqlalchemy.Column(sqlalchemy.String(length=50))
+    throws = sqlalchemy.Column(sqlalchemy.String(length=50))
+    dob = sqlalchemy.Column(sqlalchemy.String(length=50))
 
     def __init__(self, pid, pos, first_name, last_name, bats, throws, dob):
         super(Player, self).__init__()
@@ -44,6 +44,8 @@ class Pitch(Entity):
     pitch_type = sqlalchemy.Column(sqlalchemy.String(length=5))
     type_confidence = sqlalchemy.Column(sqlalchemy.Float)
     pitcher = sqlalchemy.Column(sqlalchemy.Integer,
+                                sqlalchemy.ForeignKey("players.pid"))
+    batter = sqlalchemy.Column(sqlalchemy.Integer,
                                 sqlalchemy.ForeignKey("players.pid"))
     des = sqlalchemy.Column(sqlalchemy.String(length=50))
     result = sqlalchemy.Column(sqlalchemy.Enum("S", "B", "X"))

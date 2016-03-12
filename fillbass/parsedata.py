@@ -27,12 +27,20 @@ LOG.addHandler(ch)
 class DatabaseManager(object):
     """sets up a database and provides convenience functions"""
 
-    def __init__(self, db_path):
+    def __init__(self, db_path, use_mysql):
         super(DatabaseManager, self).__init__()
         self.db_path = db_path
         self.pitch_count = 0
-        self.engine = sqlalchemy.create_engine(
-            'sqlite:///' + self.db_path, echo=False)
+        if use_mysql:
+            myDB = sqlalchemy.engine.url.URL(drivername='mysql',
+                                             host='localhost',
+                                             query={
+                                                 'read_default_file': '~/.my.cnf'}
+                                             )
+            self.engine = sqlalchemy.create_engine(name_or_url=myDB)
+        else:
+            self.engine = sqlalchemy.create_engine(
+                'sqlite:///' + self.db_path, echo=False)
         self.setup_db()
         self.session = sqlalchemy.orm.sessionmaker(bind=self.engine)()
 
@@ -134,11 +142,13 @@ class Parser(object):
             doc = bs4.BeautifulSoup(f, "xml", parse_only=strain_atbats)
             for atbat in doc.find_all("atbat"):
                 pitcher = int(atbat["pitcher"])
+                batter = int(atbat["batter"])
                 for pitch in atbat.find_all("pitch"):
                     try:
                         pitch_dict = Parser.parse_class(
                             entities.Pitch, pitch, Parser.PITCH_MAPPINGS)
                         pitch_dict["pitcher"] = pitcher
+                        pitch_dict["batter"] = batter
                         pitches.append(entities.Pitch(**pitch_dict))
                     except Exception as e:
                         LOG.warning("Encountered {}".format(e))
@@ -224,9 +234,12 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--database", default="fillbass.db",
                         help="""use this file as the database. Might be written when
                       using scan. Defaults to 'fillbass.db'""")
+    parser.add_argument('--mysql', dest='mysql', action='store_true')
+    parser.add_argument('--no-mysql', dest='mysql', action='store_false')
+    parser.set_defaults(mysql=True)
     args = parser.parse_args()
 
-    db = DatabaseManager(args.database)
+    db = DatabaseManager(args.database, args.mysql)
     draw = Drawer(db)
     parser = Parser(db)
 
