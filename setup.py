@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """A setuptools based setup module.
 See:
 https://packaging.python.org/en/latest/distributing.html
@@ -77,8 +79,8 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['PySide', 'sqlalchemy', 'beautifulsoup4', 'matplotlib',
-                        'numpy'],
+    install_requires=['sqlalchemy', 'beautifulsoup4', 'matplotlib',
+                        'numpy', 'Click', 'requests', 'lxml'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -93,8 +95,8 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
-        'gui_scripts': [
-            'fillbass=fillbass.fillbass:start',
-        ],
+        'console_scripts': [
+            'fillbass_fetch=fillbass.fetchdata:fetch'
+        ]
     },
 )
