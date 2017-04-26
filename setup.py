@@ -96,7 +96,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'fillbass_fetch=fillbass.fetchdata:fetch'
+            'fillbass=fillbass.scripts.scripts:cli'
         ]
     },
 )

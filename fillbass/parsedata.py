@@ -1,27 +1,15 @@
 import bs4
 import os
+
+import click
 import sqlalchemy
-import entities
+from . import entities
 import matplotlib.pyplot as plt
 import argparse
 import dateutil.parser
 import logging
 
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
-# create console handler and set level to debug
-ch = logging.FileHandler("parse.log")
-ch.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter(
-    '%(asctime)s %(name)s [%(levelname)s] %(message)s')
-
-# add formatter to ch
-ch.setFormatter(formatter)
-
-# add ch to logger
-LOG.addHandler(ch)
 
 
 class DatabaseManager(object):
@@ -59,9 +47,7 @@ class DatabaseManager(object):
         self.session.add_all(pitches)
 
     def player_present(self, pid):
-        return bool(self.session.query(entities.Player)
-                    .filter_by(pid=pid)
-                    .first())
+        return bool(self.get_player(pid))
 
     def commit(self):
         self.session.commit()
@@ -120,18 +106,20 @@ class Parser(object):
         datetime.datetime: lambda s: dateutil.parser.parse(s)
     }
 
+    @staticmethod
     def map_or_keep(obj, mapping):
         return mapping[obj] if obj in mapping else obj
 
+    @staticmethod
     def parse_class(clazz, xml, attribute_mapping):
         obj = {}
         for column in clazz.__table__.columns:
             attribute = Parser.map_or_keep(column.name, attribute_mapping)
-            LOG.debug("Searching for {}".format(attribute))
+            LOG.debug("Searching for [%s]", attribute)
             if attribute in xml.attrs:
                 value = Parser.map_or_keep(
                     column.type.python_type, Parser.TYPE_TO_FROM_STRING)(xml[attribute])
-                LOG.debug("Found {} of type {}".format(value, type(value)))
+                LOG.debug("Found [%s] of type [%s]", value, type(value))
                 obj[column.name] = value
         return obj
 
@@ -151,7 +139,7 @@ class Parser(object):
                         pitch_dict["batter"] = batter
                         pitches.append(entities.Pitch(**pitch_dict))
                     except Exception as e:
-                        LOG.warning("Encountered {}".format(e))
+                        LOG.warning("Encountered error [%s] while parsing a pitch", e)
             self.db.add_pitches(pitches)
 
     def parse_player(self, path):
@@ -165,18 +153,20 @@ class Parser(object):
                         self.db.add_player(entities.Player(**player_dict))
                         self.parsed_players.append(int(player["id"]))
                     except Exception as e:
-                        LOG.warning("Encountered {}".format(e))
+                        LOG.warning("Encountered error [%s] while parsing player [%s]", e, int(player["id"]))
 
     def find_files(self, directory):
-        for root, _, files in os.walk(directory):
-            for name in files:
-                file_name = os.path.join(root, name)
-                LOG.debug("now parsing file {}".format(name))
-                if name.startswith("inning_all"):
-                    self.parse_game(file_name)
-                elif name[:1].isdigit():
-                    self.parse_player(file_name)
-            self.db.commit()
+        file_list = list(os.walk(directory))
+        with click.progressbar(file_list, label="Scanning all files", width=0, item_show_func=lambda x: x[0] if x is not None else None) as file_tuples:
+            for root, _, files in file_tuples:
+                for name in files:
+                    file_name = os.path.join(root, name)
+                    LOG.debug("now parsing file [%s]", name)
+                    if name.startswith("inning_all"):
+                        self.parse_game(file_name)
+                    elif name[:1].isdigit():
+                        self.parse_player(file_name)
+                self.db.commit()
 
 
 class Drawer(object):
@@ -219,11 +209,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="subparser_name")
 
-    scan = subparsers.add_parser("scan", help="""scan and parse a directory tree for
-                                                 xml files""")
-    scan.add_argument("directory", nargs="?", default="data",
-                      help="""walk this directory. Defaults to 'data'""")
-
     list_players = subparsers.add_parser("list", help="""list any players""")
     list_players.add_argument("first_name", nargs="?", default=None)
     list_players.add_argument("last_name", nargs="?", default=None)
@@ -243,9 +228,7 @@ if __name__ == '__main__':
     draw = Drawer(db)
     parser = Parser(db)
 
-    if args.subparser_name == "scan":
-        parser.find_files(args.directory)
-    elif args.subparser_name == "list":
+    if args.subparser_name == "list":
         print("ID\tName")
         players = db.get_players(first_name=args.first_name,
                                  last_name=args.last_name)
