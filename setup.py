@@ -46,10 +46,10 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
 
         # Indicate who your project is intended for
-        'Environment :: X11 Applications :: Qt',
+        'Environment :: Console',
         'Intended Audience :: End Users/Desktop',
 
         # Pick your license as you wish (should match "license" above)
