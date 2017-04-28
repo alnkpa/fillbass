@@ -1,16 +1,21 @@
-import bs4
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import logging
 import os
 
+import bs4
 import click
+import dateutil.parser
+import matplotlib
+import matplotlib.pyplot as plt
 import sqlalchemy
 from matplotlib import patches
 from sqlalchemy.sql import func
+
 from . import entities
-import matplotlib.pyplot as plt
-import argparse
-import dateutil.parser
-import logging
-import matplotlib
+
 matplotlib.rcParams['backend'] = "Qt5Agg"
 
 LOG = logging.getLogger(__name__)
@@ -180,7 +185,8 @@ class Parser(object):
 
     def find_files(self, directory):
         file_list = list(os.walk(directory))
-        with click.progressbar(file_list, label="Scanning all files", width=0, item_show_func=lambda x: x[0] if x is not None else None) as file_tuples:
+        with click.progressbar(file_list, label="Scanning all files", width=0,
+                               item_show_func=lambda x: x[0] if x is not None else None) as file_tuples:
             for root, _, files in file_tuples:
                 for name in files:
                     file_name = os.path.join(root, name)
@@ -222,13 +228,14 @@ class Drawer(object):
                     ".",
                     ms=4,
                     label=t[0],
-                     alpha=0.75)
+                    alpha=0.75)
 
-        ax.add_patch(patches.Rectangle((-0.7083, sz_bot), 0.7083*2, sz_top-sz_bot, fill=False, label="Strikezone", zorder=100))
-        ax.set_xlim(-0.7083*4, 0.7083*4)
-        ax.set_ylim(-1, sz_top*2)
+        ax.add_patch(patches.Rectangle((-0.7083, sz_bot), 0.7083 * 2, sz_top - sz_bot, fill=False, label="Strikezone",
+                                       zorder=100))
+        ax.set_xlim(-0.7083 * 4, 0.7083 * 4)
+        ax.set_ylim(-1, sz_top * 2)
         ax.set_aspect(1)
         ax.set_title("Pitch Location by type for " + str(pitcher))
-        ax.legend(loc="upper left", bbox_to_anchor=(1,1))
+        ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
         LOG.info("Evaluated [%i] pitches", pitch_count)
         plt.show(block=True)

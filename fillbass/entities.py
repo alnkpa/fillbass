@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -46,7 +50,7 @@ class Pitch(Entity):
     pitcher = sqlalchemy.Column(sqlalchemy.Integer,
                                 sqlalchemy.ForeignKey("players.pid"))
     batter = sqlalchemy.Column(sqlalchemy.Integer,
-                                sqlalchemy.ForeignKey("players.pid"))
+                               sqlalchemy.ForeignKey("players.pid"))
     des = sqlalchemy.Column(sqlalchemy.String(length=50))
     result = sqlalchemy.Column(sqlalchemy.Enum("S", "B", "X"))
     tfs_zulu = sqlalchemy.Column(sqlalchemy.DateTime)

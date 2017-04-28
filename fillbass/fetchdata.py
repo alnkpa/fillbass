@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import logging
 import os.path
@@ -80,7 +82,3 @@ def fetch_day(save_path, day, session, players_fetched):
                    players_fetched)
 
     LOG.info("Retrieved [%s]", day)
-
-
-if __name__ == '__main__':
-    fetch()

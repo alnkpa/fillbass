@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -19,7 +24,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.group(context_settings=CONTEXT_SETTINGS, chain=True)
 @click.option("-v", "--verbose", count=True)
 @click.option("-d", "--database", type=click.Path(dir_okay=False, writable=True), default="fillbass.db",
-                        help="""use this file as the sqlite database file. Might be written when
+              help="""use this file as the sqlite database file. Might be written when
                       using scan. Defaults to 'fillbass.db'""")
 @click.option("--mysql/--no-mysql", default=False, help="""Use MySQL as database.
 If True, database access needs to be configured via ~/.my.cnf. If False, use sqlite. Default to False.""")
@@ -92,7 +97,8 @@ def list(ctx, first_name, last_name):
     db_manager = ctx.obj["DB_MANAGER"]
     matching_players = db_manager.get_players(first_name, last_name)
     column_names = [n for n in map(lambda c: c.name, Player.__table__.columns)]
-    click.echo_via_pager(tabulate([{c: getattr(player, c) for c in column_names} for player in matching_players], headers="keys"))
+    click.echo_via_pager(
+        tabulate([{c: getattr(player, c) for c in column_names} for player in matching_players], headers="keys"))
 
     if len(matching_players) is 1:
         ctx.obj["CURRENT_PLAYER"] = matching_players[0]
