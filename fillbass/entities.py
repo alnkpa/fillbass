@@ -27,7 +27,7 @@ class Player(Entity):
         self.dob = dob
 
     def __repr__(self):
-        return self.first_name + " " + self.last_name
+        return str(self.pid) + " " + self.pos + " " + self.first_name + " " + self.last_name
 
 
 class Pitch(Entity):
@@ -73,7 +73,6 @@ class Pitch(Entity):
     break_y = sqlalchemy.Column(sqlalchemy.Float)
     break_angle = sqlalchemy.Column(sqlalchemy.Float)
     break_length = sqlalchemy.Column(sqlalchemy.Float)
-    type_confidence = sqlalchemy.Column(sqlalchemy.Float)
     zone = sqlalchemy.Column(sqlalchemy.Integer)
     nasty = sqlalchemy.Column(sqlalchemy.Integer)
     spin_dir = sqlalchemy.Column(sqlalchemy.Float)

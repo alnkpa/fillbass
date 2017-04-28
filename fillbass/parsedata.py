@@ -3,11 +3,15 @@ import os
 
 import click
 import sqlalchemy
+from matplotlib import patches
+from sqlalchemy.sql import func
 from . import entities
 import matplotlib.pyplot as plt
 import argparse
 import dateutil.parser
 import logging
+import matplotlib
+matplotlib.rcParams['backend'] = "Qt5Agg"
 
 LOG = logging.getLogger(__name__)
 
@@ -34,6 +38,12 @@ class DatabaseManager(object):
 
     def setup_db(self):
         entities.Entity.metadata.create_all(self.engine)
+
+    def add_at_bat(self, at_bat):
+        self.session.add(at_bat)
+
+    def add_at_bats(self, at_bats):
+        self.session.add_all(at_bats)
 
     def add_player(self, player):
         self.session.add(player)
@@ -65,6 +75,15 @@ class DatabaseManager(object):
 
     def get_player(self, id):
         return self.session.query(entities.Player).filter_by(pid=id).first()
+
+    def get_average_for_pitches(self, column, pitcher_id=None, pitch_type=None):
+        query = self.session.query(func.avg(column))
+        if pitcher_id is not None:
+            query = query.filter(entities.Pitch.pitcher == pitcher_id)
+        if pitch_type is not None:
+            query = query.filter(entities.Pitch.pitch_type.like(pitch_type))
+
+        return query.one()
 
     def get_pitches(self, pitcher_id=None, pitch_type=None):
         query = self.session.query(entities.Pitch)
@@ -115,11 +134,15 @@ class Parser(object):
         obj = {}
         for column in clazz.__table__.columns:
             attribute = Parser.map_or_keep(column.name, attribute_mapping)
-            LOG.debug("Searching for [%s]", attribute)
+            LOG.info("Searching for [%s]", attribute)
             if attribute in xml.attrs:
-                value = Parser.map_or_keep(
-                    column.type.python_type, Parser.TYPE_TO_FROM_STRING)(xml[attribute])
-                LOG.debug("Found [%s] of type [%s]", value, type(value))
+                value = None
+                try:
+                    value = Parser.map_or_keep(
+                        column.type.python_type, Parser.TYPE_TO_FROM_STRING)(xml[attribute])
+                except Exception:
+                    pass
+                LOG.info("Found [%s] of type [%s]", value, type(value))
                 obj[column.name] = value
         return obj
 
@@ -176,63 +199,36 @@ class Drawer(object):
         super(Drawer, self).__init__()
         self.db = db
 
-    def forceAspect(ax, aspect=1):
-        im = ax.get_images()
-        extent = im[0].get_extent()
-        ax.set_aspect(
-            abs((extent[1] - extent[0]) / (extent[3] - extent[2])) / aspect)
-
-    def pitches_by_type(self, pitcher):
+    def pitches_by_type(self, pitcher, pitch_type=None):
         pitch_types = self.db.get_pitch_types(pitcher_id=pitcher.pid)
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
         pitch_count = 0
+        sz_bot = self.db.get_average_for_pitches(entities.Pitch.sz_bot, pitcher.pid, pitch_type)[0]
+        sz_top = self.db.get_average_for_pitches(entities.Pitch.sz_top, pitcher.pid, pitch_type)[0]
 
         for t in pitch_types:
+            if pitch_type is not None and not t[0] == pitch_type:
+                LOG.info("Type [%s] does not match selected type [%s]", t[0], pitch_type)
+                continue
+
             pitches = self.db.get_pitches(
                 pitcher_id=pitcher.pid, pitch_type=t[0])
             pitch_count += len(pitches)
             ax.plot([x.px for x in pitches],
                     [x.pz for x in pitches],
                     ".",
-                    label=t[0])
-        ax.hlines(y=0, xmin=-0.7083, xmax=0.7083, label="Home plate")
-        ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+                    ms=4,
+                    label=t[0],
+                     alpha=0.75)
+
+        ax.add_patch(patches.Rectangle((-0.7083, sz_bot), 0.7083*2, sz_top-sz_bot, fill=False, label="Strikezone", zorder=100))
+        ax.set_xlim(-0.7083*4, 0.7083*4)
+        ax.set_ylim(-1, sz_top*2)
         ax.set_aspect(1)
         ax.set_title("Pitch Location by type for " + str(pitcher))
-        print("evaluated %i pitches" % pitch_count)
-        plt.show()
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="subparser_name")
-
-    list_players = subparsers.add_parser("list", help="""list any players""")
-    list_players.add_argument("first_name", nargs="?", default=None)
-    list_players.add_argument("last_name", nargs="?", default=None)
-
-    show_pitches = subparsers.add_parser("show", help="show pitches")
-    show_pitches.add_argument(
-        "pitcher", type=int, help="""id of the wanted pitcher""")
-    parser.add_argument("-d", "--database", default="fillbass.db",
-                        help="""use this file as the database. Might be written when
-                      using scan. Defaults to 'fillbass.db'""")
-    parser.add_argument('--mysql', dest='mysql', action='store_true')
-    parser.add_argument('--no-mysql', dest='mysql', action='store_false')
-    parser.set_defaults(mysql=True)
-    args = parser.parse_args()
-
-    db = DatabaseManager(args.database, args.mysql)
-    draw = Drawer(db)
-    parser = Parser(db)
-
-    if args.subparser_name == "list":
-        print("ID\tName")
-        players = db.get_players(first_name=args.first_name,
-                                 last_name=args.last_name)
-        for p in players:
-            print("%i\t%s" % (p.pid, p))
-    elif args.subparser_name == "show":
-        draw.pitches_by_type(db.get_player(args.pitcher))
+        ax.legend(loc="upper left", bbox_to_anchor=(1,1))
+        LOG.info("Evaluated [%i] pitches", pitch_count)
+        plt.show(block=True)

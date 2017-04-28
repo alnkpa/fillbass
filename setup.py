@@ -80,7 +80,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['sqlalchemy', 'beautifulsoup4', 'matplotlib',
-                        'numpy', 'Click', 'requests', 'lxml'],
+                        'numpy', 'Click', 'requests', 'lxml', 'tabulate', 'pyqt5'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
