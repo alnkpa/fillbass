@@ -8,10 +8,14 @@ import os
 import bs4
 import click
 import dateutil.parser
+import math
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy
 import sqlalchemy
 from matplotlib import patches
+from mpl_toolkits.mplot3d import Axes3D, art3d
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from sqlalchemy.sql import func
 
 from . import entities
@@ -209,7 +213,7 @@ class Drawer(object):
         pitch_types = self.db.get_pitch_types(pitcher_id=pitcher.pid)
 
         fig = plt.figure()
-        ax = fig.add_subplot(111)
+        ax = fig.add_subplot(111, projection="3d")
 
         pitch_count = 0
         sz_bot = self.db.get_average_for_pitches(entities.Pitch.sz_bot, pitcher.pid, pitch_type)[0]
@@ -222,20 +226,40 @@ class Drawer(object):
 
             pitches = self.db.get_pitches(
                 pitcher_id=pitcher.pid, pitch_type=t[0])
-            pitch_count += len(pitches)
-            ax.plot([x.px for x in pitches],
-                    [x.pz for x in pitches],
-                    ".",
-                    ms=4,
-                    label=t[0],
-                    alpha=0.75)
 
-        ax.add_patch(patches.Rectangle((-0.7083, sz_bot), 0.7083 * 2, sz_top - sz_bot, fill=False, label="Strikezone",
-                                       zorder=100))
+            lines = []
+            for pitch in pitches:
+                if pitch.x0 is None or \
+                                pitch.y0 is None or \
+                                pitch.z0 is None or \
+                                pitch.px is None or \
+                                pitch.pz is None or \
+                                pitch.vx0 is None or \
+                                pitch.vy0 is None or \
+                                pitch.vz0 is None or \
+                                pitch.ax is None or \
+                                pitch.ay is None or \
+                                pitch.az is None:
+                    continue
+
+                t_to_catcher = (- pitch.vy0 - math.sqrt((pitch.vy0**2)-2*pitch.ay*(pitch.y0-0))) / pitch.ay
+                pitch_line = [(pitch.x0 + pitch.vx0 * t + pitch.ax * t**2 / 2,
+                               pitch.y0 + pitch.vy0 * t + pitch.ay * t**2 / 2,
+                               pitch.z0 + pitch.vz0 * t + pitch.az * t**2 / 2)
+                              for t in numpy.linspace(0, t_to_catcher)]
+                lines.append(pitch_line)
+            ax.add_collection(Line3DCollection(lines, label=t[0], linewidths=1, alpha=0.5, colors=next(ax._get_lines.prop_cycler)['color']))
+
+            pitch_count += len(pitches)
+
+        strikezone = patches.Rectangle((-0.7083, sz_bot), 0.7083 * 2, sz_top - sz_bot, fill=False, label="Strikezone")
+
+        ax.add_patch(strikezone)
+        art3d.pathpatch_2d_to_3d(strikezone, z=1.417, zdir="y")
         ax.set_xlim(-0.7083 * 4, 0.7083 * 4)
-        ax.set_ylim(-1, sz_top * 2)
-        ax.set_aspect(1)
+        ax.set_ylim(0, 50)
+        ax.set_zlim(-1, sz_top * 2)
         ax.set_title("Pitch Location by type for " + str(pitcher))
-        ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        ax.legend()
         LOG.info("Evaluated [%i] pitches", pitch_count)
         plt.show(block=True)

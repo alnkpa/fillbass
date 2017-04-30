@@ -97,8 +97,13 @@ def list(ctx, first_name, last_name):
     db_manager = ctx.obj["DB_MANAGER"]
     matching_players = db_manager.get_players(first_name, last_name)
     column_names = [n for n in map(lambda c: c.name, Player.__table__.columns)]
-    click.echo_via_pager(
-        tabulate([{c: getattr(player, c) for c in column_names} for player in matching_players], headers="keys"))
+
+    players_table = tabulate([{c: getattr(player, c) for c in column_names} for player in matching_players], headers="keys")
+
+    if len(matching_players) > 1:
+        click.echo_via_pager(players_table)
+    else:
+        click.echo(players_table)
 
     if len(matching_players) is 1:
         ctx.obj["CURRENT_PLAYER"] = matching_players[0]

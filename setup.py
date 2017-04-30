@@ -79,7 +79,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['sqlalchemy', 'beautifulsoup4', 'matplotlib',
+    install_requires=['sqlalchemy', 'beautifulsoup4', 'matplotlib>=1.5',
                         'numpy', 'Click', 'requests', 'lxml', 'tabulate', 'pyqt5'],
 
     # List additional groups of dependencies here (e.g. development
