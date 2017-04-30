@@ -1,31 +1,16 @@
 # fillbass
 
-Small python files to print pitches.
+[![base ball](doc/ball.jpg)](https://pixabay.com/en/ball-baseball-close-up-dirty-macro-1842290/)
 
-## Dependencies
+Small python files to show pitches.
 
-- [bs4](http://www.crummy.com/software/BeautifulSoup/#Download)
-- [matplotlib](http://matplotlib.org/downloads.html)
-- [sqlalchemy](http://www.sqlalchemy.org/download.html)
 
 ## Usage
 
+``` bash
+$ pip install fillbass
+$ fillbass fetch scan # -h # This takes a while
+$ fillbass list --last-name Kershaw pitches_by --pitch-type SL
 ```
-[patrick@arch fillbass]$ python fetchdata.py # -h # This takes a while
-…
-[patrick@arch fillbass]$ python parsedata.py -d fillbass.db scan data
-…
-[patrick@arch fillbass]$ python parsedata.py -d fillbass.db list C
-ID	Name
-110450	Cory Bailey
-112020	Chris Carpenter
-…
-[patrick@arch fillbass]$ python parsedata.py -d fillbass.db list C K
-ID	Name
-446372	Corey Kluber
-461317	Chris Kinsey
-477132	Clayton Kershaw
-…
-[patrick@arch fillbass]$ python parsedata.py -d fillbass.db show 477132
-evaluated 6007 pitches
-```
+
+![kershaw 3D sliders](doc/kershaw_changeups_3d_with_acc.png)
